@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "864125095365",
+    "project_id": "firestockbilly",
+    "storage_bucket": "firestockbilly.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:864125095365:android:330930b229fd53a5e3cfac",
+        "android_client_info": {
+          "package_name": "com.example.firestockbilly"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA_xDbAvvppXCqIiyzbPK3ZLkPgUZUuKSI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

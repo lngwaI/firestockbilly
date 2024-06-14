@@ -1,0 +1,30 @@
+<!-- activity_account_detail.xml -->
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/main"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:padding="16dp">
+
+    <TextView
+        android:id="@+id/textViewAccountName"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textSize="18sp"
+        android:text="Konto Name"
+        android:layout_marginBottom="16dp"/>
+
+    <LinearLayout
+        android:id="@+id/containerRooms"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:layout_below="@id/textViewAccountName"/>
+
+    <Button
+        android:id="@+id/buttonAddNewRoom"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Neuen Raum erstellen"
+        android:layout_below="@id/containerRooms"/>
+
+</RelativeLayout>
