@@ -38,16 +38,13 @@ public class AccountDetail extends AppCompatActivity {
         String accountName = getIntent().getStringExtra("accountName");
         textViewAccountName.setText(accountName);
 
-        // Load user's rooms from SharedPreferences
         roomsList = loadUserRooms();
         populateRooms(roomsList);
 
-        // Setup button to add new room
         buttonAddNewRoom.setOnClickListener(view -> {
             startActivityForResult(new Intent(AccountDetail.this, CreateAccount.class), REQUEST_CREATE_ACCOUNT);
         });
 
-        // Show or hide add room button based on number of rooms
         updateAddRoomButtonVisibility();
     }
 
@@ -59,10 +56,9 @@ public class AccountDetail extends AppCompatActivity {
             String roomName = data.getStringExtra("roomName");
             if (roomName != null) {
                 roomsList.add(roomName);
-                saveUserRooms(roomsList); // Save updated rooms list
-                populateRooms(roomsList); // Update UI with new room
+                saveUserRooms(roomsList);
+                populateRooms(roomsList);
 
-                // Update add room button visibility
                 updateAddRoomButtonVisibility();
             }
         }
@@ -72,15 +68,13 @@ public class AccountDetail extends AppCompatActivity {
         SharedPreferences preferences = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
         String serializedRooms = preferences.getString(KEY_ACCOUNTS, null);
         if (serializedRooms != null) {
-            // Deserialize rooms list from SharedPreferences
             return deserializeRooms(serializedRooms);
         } else {
-            return new ArrayList<>(); // Return empty list if no rooms found
+            return new ArrayList<>();
         }
     }
 
     private void saveUserRooms(List<String> rooms) {
-        // Serialize rooms list and save to SharedPreferences
         SharedPreferences preferences = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
         SharedPreferences.Editor editor = preferences.edit();
         editor.putString(KEY_ACCOUNTS, serializeRooms(rooms));
@@ -88,27 +82,11 @@ public class AccountDetail extends AppCompatActivity {
     }
 
     private List<String> deserializeRooms(String serializedRooms) {
-        // Example method to deserialize rooms list from a string
-        // Replace with actual deserialization logic based on your data model
-        // Example implementation:
-        // return Arrays.asList(serializedRooms.split(","));
-        // This assumes rooms are serialized as comma-separated values
-        // Replace with your actual deserialization logic
-        return new ArrayList<>(); // Placeholder
+        return new ArrayList<>();
     }
 
     private String serializeRooms(List<String> rooms) {
-        // Example method to serialize rooms list to a string
-        // Replace with actual serialization logic based on your data model
-        // Example implementation:
-        // StringBuilder sb = new StringBuilder();
-        // for (String room : rooms) {
-        //     sb.append(room).append(",");
-        // }
-        // return sb.toString();
-        // This assumes rooms are serialized as comma-separated values
-        // Replace with your actual serialization logic
-        return ""; // Placeholder
+        return "";
     }
 
     private void populateRooms(List<String> rooms) {
@@ -118,7 +96,6 @@ public class AccountDetail extends AppCompatActivity {
             Button button = new Button(this);
             button.setText(room);
             button.setOnClickListener(view -> {
-                // Handle click on room button (if needed)
             });
             containerRooms.addView(button);
         }

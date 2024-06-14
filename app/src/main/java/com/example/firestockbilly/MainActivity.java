@@ -1,86 +1,100 @@
 package com.example.firestockbilly;
 
-import android.content.Intent;
 import android.os.Bundle;
-import android.view.View;
+import android.util.Log;
 import android.widget.Toast;
 
-import androidx.activity.EdgeToEdge;
-import androidx.activity.result.ActivityResultLauncher;
-import androidx.activity.result.contract.ActivityResultContracts;
+import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.graphics.Insets;
-import androidx.core.view.ViewCompat;
-import androidx.core.view.WindowInsetsCompat;
-import androidx.recyclerview.widget.LinearLayoutManager;
-import androidx.recyclerview.widget.RecyclerView;
+
+import com.google.android.gms.tasks.OnFailureListener;
+import com.google.android.gms.tasks.OnSuccessListener;
+import com.google.firebase.firestore.DocumentReference;
+import com.google.firebase.firestore.FirebaseFirestore;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
-public class MainActivity extends AppCompatActivity implements AccountAdapter.OnAccountItemClickListener {
+public class MainActivity extends AppCompatActivity {
 
-    private static final int REQUEST_CREATE_ACCOUNT = 1;
-    private RecyclerView accountsRecyclerView;
-    private AccountAdapter accountAdapter;
-    private List<String> accountsList;
-
-    // ActivityResultLauncher for starting CreateAccountActivity
-    private final ActivityResultLauncher<Intent> createAccountLauncher = registerForActivityResult(
-            new ActivityResultContracts.StartActivityForResult(),
-            result -> {
-                if (result.getResultCode() == RESULT_OK) {
-                    Intent data = result.getData();
-                    if (data != null && data.hasExtra("accountName")) {
-                        String accountName = data.getStringExtra("accountName");
-                        accountsList.add(accountName);
-                        accountAdapter.notifyDataSetChanged();
-                        Toast.makeText(this, "Neues Konto erstellt: " + accountName, Toast.LENGTH_SHORT).show();
-                    }
-                }
-            });
+    private static final String TAG = "MainActivity";
+    private FirebaseFirestore db;
 
     @Override
-    protected void onCreate(Bundle savedInstanceState) {
+    protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        EdgeToEdge.enable(this); // Edge-to-Edge library setup
         setContentView(R.layout.activity_main);
 
-        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
-            Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
-            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
-            return insets;
-        });
+        // Initialisiere Firestore
+        db = FirebaseFirestore.getInstance();
 
-        accountsList = new ArrayList<>();
-        accountsList.add("Konto 1");
-        accountsList.add("Konto 2");
-        accountsList.add("Konto 3");
-        // Add more accounts as needed
-
-        accountsRecyclerView = findViewById(R.id.accountsRecyclerView);
-        accountsRecyclerView.setLayoutManager(new LinearLayoutManager(this));
-        accountAdapter = new AccountAdapter(accountsList, this);
-        accountsRecyclerView.setAdapter(accountAdapter);
-
-        // Find and set click listener for "Neues Konto hinzufügen" button
-        findViewById(R.id.buttonAddAccount).setOnClickListener(v -> onAddAccountClicked());
+        // Beispiel-Methode aufrufen, um Daten hinzuzufügen
+        addExampleData();
     }
 
-    // Method to handle click on "Neues Konto hinzufügen" button
-    private void onAddAccountClicked() {
-        Intent intent = new Intent(this, CreateAccount.class);
-        createAccountLauncher.launch(intent);
+    private void addExampleData() {
+        // Erstelle einen Benutzer
+        Map<String, Object> user = new HashMap<>();
+        user.put("name", "Max Mustermann");
+        user.put("email", "max.mustermann@example.com");
+        Toast.makeText(MainActivity.this, "D", Toast.LENGTH_SHORT).show();
+        // Erstelle ein Konto
+        Map<String, Object> account = new HashMap<>();
+        account.put("name", "Hauptkonto");
+        account.put("admin", "userID_here"); // Hier sollte die tatsächliche Benutzer-ID sein
+        account.put("code", "abc123");
+        List<String> members = new ArrayList<>();
+        members.add("userID_here"); // Füge die tatsächliche Benutzer-ID hinzu
+        account.put("members", members);
+        List<String> entries = new ArrayList<>();
+        entries.add("entryID_here"); // Füge die tatsächliche Eintrags-ID hinzu
+        account.put("entries", entries);
+
+        // Füge den Benutzer und das Konto zur Datenbank hinzu
+        addUserData(user, account);
     }
 
+    private void addUserData(Map<String, Object> user, Map<String, Object> account) {
+        // Füge den Benutzer hinzu
+        db.collection("users")
+                .add(user)
+                .addOnSuccessListener(new OnSuccessListener<DocumentReference>() {
+                    @Override
+                    public void onSuccess(DocumentReference documentReference) {
+                        Log.d(TAG, "Benutzer erfolgreich hinzugefügt mit ID: " + documentReference.getId());
 
+                        // Wenn der Benutzer erfolgreich hinzugefügt wurde, füge das Konto hinzu
+                        addAccountData(documentReference.getId(), account);
+                    }
+                })
+                .addOnFailureListener(new OnFailureListener() {
+                    @Override
+                    public void onFailure(@NonNull Exception e) {
+                        Log.w(TAG, "Fehler beim Hinzufügen des Benutzers", e);
+                    }
+                });
+    }
 
-    // Handle click on account item
-    @Override
-    public void onItemClick(String accountName) {
-        Intent intent = new Intent(this, AccountDetail.class);
-        intent.putExtra("accountName", accountName);
-        startActivity(intent);
+    private void addAccountData(String userId, Map<String, Object> account) {
+        // Füge das Konto hinzu
+        db.collection("accounts")
+                .add(account)
+                .addOnSuccessListener(new OnSuccessListener<DocumentReference>() {
+                    @Override
+                    public void onSuccess(DocumentReference documentReference) {
+                        Log.d(TAG, "Konto erfolgreich hinzugefügt mit ID: " + documentReference.getId());
+
+                        // Hier kannst du weitere Aktionen ausführen, wenn das Konto erfolgreich hinzugefügt wurde
+                    }
+                })
+                .addOnFailureListener(new OnFailureListener() {
+                    @Override
+                    public void onFailure(@NonNull Exception e) {
+                        Log.w(TAG, "Fehler beim Hinzufügen des Kontos", e);
+                    }
+                });
     }
 }
