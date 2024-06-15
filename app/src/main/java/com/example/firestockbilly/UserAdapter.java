@@ -28,7 +28,7 @@ public class UserAdapter extends RecyclerView.Adapter<UserAdapter.UserViewHolder
     @Override
     public void onBindViewHolder(@NonNull UserViewHolder holder, int position) {
         String userId = userList.get(position);
-        holder.userNameTextView.setText("UserIds: " + userId); // Hier können Sie den Nutzernamen setzen, wenn er abgerufen wird
+        holder.userNameTextView.setText("UserIds: " + userId);
     }
 
     @Override

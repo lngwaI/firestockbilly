@@ -6,7 +6,6 @@ import android.text.InputType;
 import android.util.Log;
 import android.widget.Button;
 import android.widget.EditText;
-import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatActivity;
@@ -62,14 +61,32 @@ public class AccountDetail extends AppCompatActivity {
                     accountNameTextView.setText(accountName);
 
                     String adminUserId = document.getString("userId");
+                    Log.d(TAG, "Admin UserId: " + adminUserId); // Logging der adminUserId
 
-                    // Überprüfen, ob der aktuelle Benutzer der Administrator ist und den Display-Namen anzeigen
-                    if (currentUser != null && currentUser.getUid().equals(adminUserId)) {
-                        String displayName = currentUser.getDisplayName();
-                        displayNameTextView.setText(displayName + " [Admin]");
-                    } else {
-                        Log.e(TAG, "Ungültige Nutzer-ID für Administrator: " + adminUserId);
-                    }
+                    // Admin-Nutzer-Dokument abrufen und den Display-Namen anzeigen
+                    db.collection("users").document(adminUserId).get().addOnCompleteListener(adminTask -> {
+                        if (adminTask.isSuccessful()) {
+                            DocumentSnapshot adminDocument = adminTask.getResult();
+                            if (adminDocument.exists()) {
+                                Log.d(TAG, "Admin Document Data: " + adminDocument.getData()); // Log des gesamten Dokuments
+
+                                // Überprüfen Sie den Namen des Admins
+                                String adminDisplayName = adminDocument.getString("displayname");
+                                if (adminDisplayName != null && !adminDisplayName.isEmpty()) {
+                                    displayNameTextView.setText(adminDisplayName + " [Admin]");
+                                } else {
+                                    Log.e(TAG, "Admin DisplayName ist leer oder null");
+                                    displayNameTextView.setText("Admin Name nicht gefunden [Admin]");
+                                }
+                            } else {
+                                Log.d(TAG, "Admin-Nutzer-Dokument nicht gefunden für ID: " + adminUserId);
+                                displayNameTextView.setText("Admin Name nicht gefunden [Admin]");
+                            }
+                        } else {
+                            Log.e(TAG, "Fehler beim Abrufen des Admin-Nutzer-Dokuments: ", adminTask.getException());
+                            displayNameTextView.setText("Fehler beim Abrufen des Admin-Namens");
+                        }
+                    });
 
                     // Weitere Mitglieder (userIds) aus dem Firestore-Dokument abrufen und anzeigen
                     List<String> userIds = (List<String>) document.get("userIds");
@@ -94,9 +111,26 @@ public class AccountDetail extends AppCompatActivity {
     }
 
     private void displayUserNames(List<String> userIds) {
-        // Erstellen Sie den Adapter und setzen Sie ihn für den RecyclerView
-        userAdapter = new UserAdapter(userIds);
-        usersRecyclerView.setAdapter(userAdapter);
+        // Iterieren Sie über die userIds und laden Sie die Namen aus Firestore
+        for (String userId : userIds) {
+            db.collection("users").document(userId).get().addOnCompleteListener(task -> {
+                if (task.isSuccessful()) {
+                    DocumentSnapshot userDocument = task.getResult();
+                    if (userDocument.exists()) {
+                        String displayName = userDocument.getString("displayName");
+                        if (displayName != null && !displayName.isEmpty()) {
+                            displayNameTextView.append("\n" + displayName); // Anzeige des Namens
+                        } else {
+                            Log.e(TAG, "DisplayName ist leer oder null für userId: " + userId);
+                        }
+                    } else {
+                        Log.d(TAG, "User Document not found for userId: " + userId);
+                    }
+                } else {
+                    Log.e(TAG, "Error getting user document for userId: " + userId, task.getException());
+                }
+            });
+        }
     }
 
     private void showAddUserDialog() {

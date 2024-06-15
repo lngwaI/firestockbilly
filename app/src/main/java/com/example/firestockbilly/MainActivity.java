@@ -4,6 +4,7 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.widget.Button;
 import android.widget.Toast;
+
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -13,8 +14,11 @@ import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
+
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -81,15 +85,34 @@ public class MainActivity extends AppCompatActivity {
                 .get()
                 .addOnCompleteListener(task -> {
                     if (task.isSuccessful()) {
-                        accountsList.clear();
+                        Set<Account> uniqueAccounts = new HashSet<>();
                         for (QueryDocumentSnapshot document : task.getResult()) {
                             String accountId = document.getId();
                             String accountName = document.getString("name");
-                            accountsList.add(new Account(accountId, accountName));
+                            uniqueAccounts.add(new Account(accountId, accountName));
                         }
-                        accountAdapter.notifyDataSetChanged();
+
+                        // Zweite Abfrage: Konten, bei denen der Benutzer Mitglied ist
+                        db.collection("accounts")
+                                .whereArrayContains("userIds", userId)
+                                .get()
+                                .addOnCompleteListener(task2 -> {
+                                    if (task2.isSuccessful()) {
+                                        for (QueryDocumentSnapshot document : task2.getResult()) {
+                                            String accountId = document.getId();
+                                            String accountName = document.getString("name");
+                                            uniqueAccounts.add(new Account(accountId, accountName));
+                                        }
+
+                                        accountsList.clear();
+                                        accountsList.addAll(uniqueAccounts);
+                                        accountAdapter.notifyDataSetChanged();
+                                    } else {
+                                        Toast.makeText(MainActivity.this, "Error getting member accounts: " + task2.getException(), Toast.LENGTH_SHORT).show();
+                                    }
+                                });
                     } else {
-                        Toast.makeText(MainActivity.this, "Error getting accounts: " + task.getException(), Toast.LENGTH_SHORT).show();
+                        Toast.makeText(MainActivity.this, "Error getting admin accounts: " + task.getException(), Toast.LENGTH_SHORT).show();
                     }
                 });
     }
