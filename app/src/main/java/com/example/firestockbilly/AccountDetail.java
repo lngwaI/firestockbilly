@@ -25,12 +25,9 @@ public class AccountDetail extends AppCompatActivity {
     private static final String TAG = "AccountDetail";
     private TextView accountNameTextView;
     private TextView displayNameTextView;
-    private FirebaseAuth auth;
-    private FirebaseUser currentUser;
     private FirebaseFirestore db;
     private Button addUserButton;
     private RecyclerView usersRecyclerView;
-    private UserAdapter userAdapter;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -42,17 +39,13 @@ public class AccountDetail extends AppCompatActivity {
         addUserButton = findViewById(R.id.addUserButton);
         usersRecyclerView = findViewById(R.id.usersRecyclerView);
 
-        auth = FirebaseAuth.getInstance();
-        currentUser = auth.getCurrentUser();
         db = FirebaseFirestore.getInstance();
 
         String accountId = getIntent().getStringExtra("accountId");
 
-        // Setzen Sie den LayoutManager für den RecyclerView
         LinearLayoutManager layoutManager = new LinearLayoutManager(this);
         usersRecyclerView.setLayoutManager(layoutManager);
 
-        // Firestore Dokument abrufen
         db.collection("accounts").document(accountId).get().addOnCompleteListener(task -> {
             if (task.isSuccessful()) {
                 DocumentSnapshot document = task.getResult();
@@ -61,16 +54,13 @@ public class AccountDetail extends AppCompatActivity {
                     accountNameTextView.setText(accountName);
 
                     String adminUserId = document.getString("userId");
-                    Log.d(TAG, "Admin UserId: " + adminUserId); // Logging der adminUserId
 
-                    // Admin-Nutzer-Dokument abrufen und den Display-Namen anzeigen
                     db.collection("users").document(adminUserId).get().addOnCompleteListener(adminTask -> {
                         if (adminTask.isSuccessful()) {
                             DocumentSnapshot adminDocument = adminTask.getResult();
                             if (adminDocument.exists()) {
-                                Log.d(TAG, "Admin Document Data: " + adminDocument.getData()); // Log des gesamten Dokuments
+                                Log.d(TAG, "Admin Document Data: " + adminDocument.getData());
 
-                                // Überprüfen Sie den Namen des Admins
                                 String adminDisplayName = adminDocument.getString("displayname");
                                 if (adminDisplayName != null && !adminDisplayName.isEmpty()) {
                                     displayNameTextView.setText(adminDisplayName + " [Admin]");
@@ -88,7 +78,6 @@ public class AccountDetail extends AppCompatActivity {
                         }
                     });
 
-                    // Weitere Mitglieder (userIds) aus dem Firestore-Dokument abrufen und anzeigen
                     List<String> userIds = (List<String>) document.get("userIds");
                     if (userIds != null && !userIds.isEmpty()) {
                         displayUserNames(userIds);
@@ -97,7 +86,6 @@ public class AccountDetail extends AppCompatActivity {
                     }
 
                     addUserButton.setOnClickListener(v -> {
-                        // Implementieren Sie den Dialog zur Hinzufügung eines Nutzers hier
                         showAddUserDialog();
                     });
 
@@ -111,7 +99,6 @@ public class AccountDetail extends AppCompatActivity {
     }
 
     private void displayUserNames(List<String> userIds) {
-        // Iterieren Sie über die userIds und laden Sie die Namen aus Firestore
         for (String userId : userIds) {
             db.collection("users").document(userId).get().addOnCompleteListener(task -> {
                 if (task.isSuccessful()) {
@@ -119,7 +106,7 @@ public class AccountDetail extends AppCompatActivity {
                     if (userDocument.exists()) {
                         String displayName = userDocument.getString("displayName");
                         if (displayName != null && !displayName.isEmpty()) {
-                            displayNameTextView.append("\n" + displayName); // Anzeige des Namens
+                            displayNameTextView.append("\n" + displayName);
                         } else {
                             Log.e(TAG, "DisplayName ist leer oder null für userId: " + userId);
                         }
@@ -134,7 +121,6 @@ public class AccountDetail extends AppCompatActivity {
     }
 
     private void showAddUserDialog() {
-        // Implementieren Sie hier die Logik für den Dialog zur Hinzufügung eines Nutzers
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setTitle("Add User");
         builder.setMessage("Enter user ID:");
@@ -158,10 +144,8 @@ public class AccountDetail extends AppCompatActivity {
         if (accountId != null) {
             db.collection("accounts").document(accountId).update("userIds", FieldValue.arrayUnion(userIdToAdd)).addOnSuccessListener(aVoid -> {
                 Log.d(TAG, "Benutzer-ID erfolgreich zum Konto hinzugefügt: " + userIdToAdd);
-                // Optional: Aktualisieren Sie die Ansicht oder führen Sie andere Aktionen aus, nachdem der Benutzer hinzugefügt wurde
             }).addOnFailureListener(e -> {
                 Log.e(TAG, "Fehler beim Hinzufügen der Benutzer-ID zum Konto: " + userIdToAdd, e);
-                // Führen Sie Fehlerbehandlung aus, wenn das Hinzufügen fehlschlägt
             });
         } else {
             Log.e(TAG, "Konto-ID nicht übergeben.");
