@@ -1,25 +1,24 @@
 package com.example.firestockbilly;
 
 import android.app.AlertDialog;
-import android.content.DialogInterface;
 import android.os.Bundle;
 import android.text.InputType;
 import android.util.Log;
-import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.LinearLayout;
 import android.widget.TextView;
-import android.widget.Toast;
 
-import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.DocumentSnapshot;
+import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
 
-import java.util.ArrayList;
 import java.util.List;
 
 public class AccountDetail extends AppCompatActivity {
@@ -27,11 +26,12 @@ public class AccountDetail extends AppCompatActivity {
     private static final String TAG = "AccountDetail";
     private TextView accountNameTextView;
     private TextView displayNameTextView;
-    private Button addUserButton;
-    private FirebaseFirestore db;
     private FirebaseAuth auth;
     private FirebaseUser currentUser;
-    private String accountId;
+    private FirebaseFirestore db;
+    private Button addUserButton;
+    private RecyclerView usersRecyclerView;
+    private UserAdapter userAdapter;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -41,20 +41,17 @@ public class AccountDetail extends AppCompatActivity {
         accountNameTextView = findViewById(R.id.accountNameTextView);
         displayNameTextView = findViewById(R.id.displayNameTextView);
         addUserButton = findViewById(R.id.addUserButton);
-        db = FirebaseFirestore.getInstance();
+        usersRecyclerView = findViewById(R.id.usersRecyclerView);
+
         auth = FirebaseAuth.getInstance();
         currentUser = auth.getCurrentUser();
+        db = FirebaseFirestore.getInstance();
 
-        // Beispiel für das Abrufen der Konto-ID (z.B. durch Klick auf ein Element in der Liste)
-        accountId = getIntent().getStringExtra("accountId");
+        String accountId = getIntent().getStringExtra("accountId");
 
-        // Button Klick Listener
-        addUserButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                addUserToAccount();
-            }
-        });
+        // Setzen Sie den LayoutManager für den RecyclerView
+        LinearLayoutManager layoutManager = new LinearLayoutManager(this);
+        usersRecyclerView.setLayoutManager(layoutManager);
 
         // Firestore Dokument abrufen
         db.collection("accounts").document(accountId).get().addOnCompleteListener(task -> {
@@ -64,16 +61,29 @@ public class AccountDetail extends AppCompatActivity {
                     String accountName = document.getString("name");
                     accountNameTextView.setText(accountName);
 
-                    // Nutzer-ID aus dem Firestore-Dokument abrufen
-                    String userId = document.getString("userId");
+                    String adminUserId = document.getString("userId");
 
-                    // Display-Namen des Nutzers aus Firebase Authentication abrufen
-                    if (currentUser != null && currentUser.getUid().equals(userId)) {
+                    // Überprüfen, ob der aktuelle Benutzer der Administrator ist und den Display-Namen anzeigen
+                    if (currentUser != null && currentUser.getUid().equals(adminUserId)) {
                         String displayName = currentUser.getDisplayName();
-                        displayNameTextView.setText(displayName);
+                        displayNameTextView.setText(displayName + " [Admin]");
                     } else {
-                        Log.e(TAG, "Ungültige Nutzer-ID: " + userId);
+                        Log.e(TAG, "Ungültige Nutzer-ID für Administrator: " + adminUserId);
                     }
+
+                    // Weitere Mitglieder (userIds) aus dem Firestore-Dokument abrufen und anzeigen
+                    List<String> userIds = (List<String>) document.get("userIds");
+                    if (userIds != null && !userIds.isEmpty()) {
+                        displayUserNames(userIds);
+                    } else {
+                        Log.d(TAG, "Keine weiteren Mitglieder gefunden für Konto-ID: " + accountId);
+                    }
+
+                    addUserButton.setOnClickListener(v -> {
+                        // Implementieren Sie den Dialog zur Hinzufügung eines Nutzers hier
+                        showAddUserDialog();
+                    });
+
                 } else {
                     Log.d(TAG, "Dokument nicht gefunden für Konto-ID: " + accountId);
                 }
@@ -83,68 +93,44 @@ public class AccountDetail extends AppCompatActivity {
         });
     }
 
-    // Methode zum Hinzufügen eines Benutzers zu einem Konto
-    private void addUserToAccount() {
-        if (currentUser != null) {
-            // Erstelle einen AlertDialog für die Nutzer-ID-Eingabe
-            AlertDialog.Builder builder = new AlertDialog.Builder(this);
-            builder.setTitle("Benutzer hinzufügen");
+    private void displayUserNames(List<String> userIds) {
+        // Erstellen Sie den Adapter und setzen Sie ihn für den RecyclerView
+        userAdapter = new UserAdapter(userIds);
+        usersRecyclerView.setAdapter(userAdapter);
+    }
 
-            // Setze ein EditText-Feld im Dialog für die Nutzer-ID
-            final EditText input = new EditText(this);
-            input.setInputType(InputType.TYPE_CLASS_TEXT);
-            builder.setView(input);
+    private void showAddUserDialog() {
+        // Implementieren Sie hier die Logik für den Dialog zur Hinzufügung eines Nutzers
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("Add User");
+        builder.setMessage("Enter user ID:");
 
-            // Setze die Buttons im Dialog
-            builder.setPositiveButton("OK", new DialogInterface.OnClickListener() {
-                @Override
-                public void onClick(DialogInterface dialog, int which) {
-                    String userId = input.getText().toString().trim();
-                    addUserIdToAccount(userId);
-                }
+        final EditText input = new EditText(this);
+        input.setInputType(InputType.TYPE_CLASS_TEXT);
+        builder.setView(input);
+
+        builder.setPositiveButton("OK", (dialog, which) -> {
+            String userIdToAdd = input.getText().toString().trim();
+            addUserIdToAccount(userIdToAdd);
+        });
+
+        builder.setNegativeButton("Cancel", (dialog, which) -> dialog.cancel());
+
+        builder.show();
+    }
+
+    private void addUserIdToAccount(String userIdToAdd) {
+        String accountId = getIntent().getStringExtra("accountId");
+        if (accountId != null) {
+            db.collection("accounts").document(accountId).update("userIds", FieldValue.arrayUnion(userIdToAdd)).addOnSuccessListener(aVoid -> {
+                Log.d(TAG, "Benutzer-ID erfolgreich zum Konto hinzugefügt: " + userIdToAdd);
+                // Optional: Aktualisieren Sie die Ansicht oder führen Sie andere Aktionen aus, nachdem der Benutzer hinzugefügt wurde
+            }).addOnFailureListener(e -> {
+                Log.e(TAG, "Fehler beim Hinzufügen der Benutzer-ID zum Konto: " + userIdToAdd, e);
+                // Führen Sie Fehlerbehandlung aus, wenn das Hinzufügen fehlschlägt
             });
-
-            builder.setNegativeButton("Abbrechen", new DialogInterface.OnClickListener() {
-                @Override
-                public void onClick(DialogInterface dialog, int which) {
-                    dialog.cancel();
-                }
-            });
-
-            // Zeige den AlertDialog an
-            builder.show();
         } else {
-            Toast.makeText(this, "Nutzer nicht angemeldet.", Toast.LENGTH_SHORT).show();
+            Log.e(TAG, "Konto-ID nicht übergeben.");
         }
     }
-
-
-    // Beispiel-Methode zum Hinzufügen einer Nutzer-ID zu einem Konto in Firestore
-    private void addUserIdToAccount(String userId) {
-        db.collection("accounts").document(accountId).get().addOnCompleteListener(task -> {
-            if (task.isSuccessful()) {
-                DocumentSnapshot document = task.getResult();
-                if (document.exists()) {
-                    List<String> userIds = (List<String>) document.get("userIds");
-                    if (userIds == null) {
-                        userIds = new ArrayList<>();
-                    }
-                    if (!userIds.contains(userId)) {
-                        userIds.add(userId);
-                        db.collection("accounts").document(accountId).update("userIds", userIds)
-                                .addOnSuccessListener(aVoid -> Toast.makeText(AccountDetail.this, "Benutzer hinzugefügt.", Toast.LENGTH_SHORT).show())
-                                .addOnFailureListener(e -> Log.e(TAG, "Fehler beim Hinzufügen des Benutzers", e));
-                    } else {
-                        Toast.makeText(AccountDetail.this, "Benutzer bereits hinzugefügt.", Toast.LENGTH_SHORT).show();
-                    }
-                } else {
-                    Log.d(TAG, "Dokument nicht gefunden für Konto-ID: " + accountId);
-                }
-            } else {
-                Log.e(TAG, "Fehler beim Abrufen des Kontos: ", task.getException());
-            }
-        });
-    }
-
-
 }
