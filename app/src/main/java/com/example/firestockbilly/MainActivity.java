@@ -1,99 +1,95 @@
 package com.example.firestockbilly;
 
+import android.content.Intent;
 import android.os.Bundle;
-import android.util.Log;
+import android.widget.Button;
 import android.widget.Toast;
-
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
-import com.google.android.gms.tasks.OnFailureListener;
-import com.google.android.gms.tasks.OnSuccessListener;
-import com.google.firebase.firestore.DocumentReference;
+import com.google.firebase.FirebaseApp;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.FirebaseFirestore;
-
+import com.google.firebase.firestore.QueryDocumentSnapshot;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 public class MainActivity extends AppCompatActivity {
 
-    private static final String TAG = "MainActivity";
+    private FirebaseAuth mAuth;
     private FirebaseFirestore db;
+    private RecyclerView accountsRecyclerView;
+    private AccountAdapter accountAdapter;
+    private List<Account> accountsList;
+    private Button buttonAddAccount;
 
     @Override
-    protected void onCreate(@Nullable Bundle savedInstanceState) {
+    protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        // Initialisiere Firestore
+        FirebaseApp.initializeApp(this);
+
+        mAuth = FirebaseAuth.getInstance();
         db = FirebaseFirestore.getInstance();
 
-        // Beispiel-Methode aufrufen, um Daten hinzuzufügen
-        addExampleData();
+        accountsRecyclerView = findViewById(R.id.accountsRecyclerView);
+        accountsRecyclerView.setLayoutManager(new LinearLayoutManager(this));
+
+        accountsList = new ArrayList<>();
+        accountAdapter = new AccountAdapter(this, accountsList);
+        accountsRecyclerView.setAdapter(accountAdapter);
+
+        buttonAddAccount = findViewById(R.id.buttonAddAccount);
+        buttonAddAccount.setOnClickListener(v -> {
+            FirebaseUser currentUser = mAuth.getCurrentUser();
+            if (currentUser != null) {
+                Intent intent = new Intent(MainActivity.this, CreateAccount.class);
+                startActivity(intent);
+            } else {
+                Toast.makeText(MainActivity.this, "User not logged in", Toast.LENGTH_SHORT).show();
+                startActivity(new Intent(MainActivity.this, Login.class));
+                finish();
+            }
+        });
+
+        if (mAuth.getCurrentUser() != null) {
+            loadUserAccounts(mAuth.getCurrentUser().getUid());
+        } else {
+            startActivity(new Intent(MainActivity.this, Login.class));
+            finish();
+        }
     }
 
-    private void addExampleData() {
-        // Erstelle einen Benutzer
-        Map<String, Object> user = new HashMap<>();
-        user.put("name", "Max Mustermann");
-        user.put("email", "max.mustermann@example.com");
-        Toast.makeText(MainActivity.this, "D", Toast.LENGTH_SHORT).show();
-        // Erstelle ein Konto
-        Map<String, Object> account = new HashMap<>();
-        account.put("name", "Hauptkonto");
-        account.put("admin", "userID_here"); // Hier sollte die tatsächliche Benutzer-ID sein
-        account.put("code", "abc123");
-        List<String> members = new ArrayList<>();
-        members.add("userID_here"); // Füge die tatsächliche Benutzer-ID hinzu
-        account.put("members", members);
-        List<String> entries = new ArrayList<>();
-        entries.add("entryID_here"); // Füge die tatsächliche Eintrags-ID hinzu
-        account.put("entries", entries);
-
-        // Füge den Benutzer und das Konto zur Datenbank hinzu
-        addUserData(user, account);
+    @Override
+    protected void onResume() {
+        super.onResume();
+        FirebaseUser currentUser = mAuth.getCurrentUser();
+        if (currentUser != null) {
+            loadUserAccounts(currentUser.getUid());
+        } else {
+            startActivity(new Intent(MainActivity.this, Login.class));
+            finish();
+        }
     }
 
-    private void addUserData(Map<String, Object> user, Map<String, Object> account) {
-        // Füge den Benutzer hinzu
-        db.collection("users")
-                .add(user)
-                .addOnSuccessListener(new OnSuccessListener<DocumentReference>() {
-                    @Override
-                    public void onSuccess(DocumentReference documentReference) {
-                        Log.d(TAG, "Benutzer erfolgreich hinzugefügt mit ID: " + documentReference.getId());
-
-                        // Wenn der Benutzer erfolgreich hinzugefügt wurde, füge das Konto hinzu
-                        addAccountData(documentReference.getId(), account);
-                    }
-                })
-                .addOnFailureListener(new OnFailureListener() {
-                    @Override
-                    public void onFailure(@NonNull Exception e) {
-                        Log.w(TAG, "Fehler beim Hinzufügen des Benutzers", e);
-                    }
-                });
-    }
-
-    private void addAccountData(String userId, Map<String, Object> account) {
-        // Füge das Konto hinzu
+    private void loadUserAccounts(String userId) {
         db.collection("accounts")
-                .add(account)
-                .addOnSuccessListener(new OnSuccessListener<DocumentReference>() {
-                    @Override
-                    public void onSuccess(DocumentReference documentReference) {
-                        Log.d(TAG, "Konto erfolgreich hinzugefügt mit ID: " + documentReference.getId());
-
-                        // Hier kannst du weitere Aktionen ausführen, wenn das Konto erfolgreich hinzugefügt wurde
-                    }
-                })
-                .addOnFailureListener(new OnFailureListener() {
-                    @Override
-                    public void onFailure(@NonNull Exception e) {
-                        Log.w(TAG, "Fehler beim Hinzufügen des Kontos", e);
+                .whereEqualTo("userId", userId)
+                .get()
+                .addOnCompleteListener(task -> {
+                    if (task.isSuccessful()) {
+                        accountsList.clear();
+                        for (QueryDocumentSnapshot document : task.getResult()) {
+                            String accountId = document.getId();
+                            String accountName = document.getString("name");
+                            accountsList.add(new Account(accountId, accountName));
+                        }
+                        accountAdapter.notifyDataSetChanged();
+                    } else {
+                        Toast.makeText(MainActivity.this, "Error getting accounts: " + task.getException(), Toast.LENGTH_SHORT).show();
                     }
                 });
     }

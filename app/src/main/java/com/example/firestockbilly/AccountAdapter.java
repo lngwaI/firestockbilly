@@ -1,4 +1,7 @@
 package com.example.firestockbilly;
+
+import android.content.Context;
+import android.content.Intent;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -11,12 +14,12 @@ import java.util.List;
 
 public class AccountAdapter extends RecyclerView.Adapter<AccountAdapter.AccountViewHolder> {
 
-    private List<String> accountsList;
-    private OnAccountItemClickListener clickListener;
+    private List<Account> accountsList;
+    private Context context;
 
-    public AccountAdapter(List<String> accountsList, OnAccountItemClickListener clickListener) {
+    public AccountAdapter(Context context, List<Account> accountsList) {
+        this.context = context;
         this.accountsList = accountsList;
-        this.clickListener = clickListener;
     }
 
     @NonNull
@@ -28,8 +31,8 @@ public class AccountAdapter extends RecyclerView.Adapter<AccountAdapter.AccountV
 
     @Override
     public void onBindViewHolder(@NonNull AccountViewHolder holder, int position) {
-        String accountName = accountsList.get(position);
-        holder.bind(accountName, clickListener);
+        Account account = accountsList.get(position);
+        holder.bind(account, context);
     }
 
     @Override
@@ -46,13 +49,14 @@ public class AccountAdapter extends RecyclerView.Adapter<AccountAdapter.AccountV
             accountButton = itemView.findViewById(R.id.accountButton);
         }
 
-        public void bind(String accountName, OnAccountItemClickListener clickListener) {
-            accountButton.setText(accountName);
-            accountButton.setOnClickListener(v -> clickListener.onItemClick(accountName));
+        public void bind(Account account, Context context) {
+            accountButton.setText(account.getName());
+            accountButton.setOnClickListener(v -> {
+                Intent intent = new Intent(context, AccountDetail.class);
+                intent.putExtra("accountId", account.getId());
+                intent.putExtra("accountName", account.getName());
+                context.startActivity(intent);
+            });
         }
-    }
-
-    public interface OnAccountItemClickListener {
-        void onItemClick(String accountName);
     }
 }

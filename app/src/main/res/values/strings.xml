@@ -1,3 +1,10 @@
 <resources>
-    <string name="app_name">FirestockBilly</string>
+    <string name="app_name">H-Test</string>
+    <string name="login">Login</string>
+    <string name="registration">Registration</string>
+    <string name="passwort">Passwort</string>
+    <string name="click_to_register">Click to register</string>
+    <string name="email">E-Mail</string>
+    <string name="display_name">Name_TEST</string>
+    <string name="click_to_login">Click to Login</string>
 </resources>

@@ -41,4 +41,5 @@ dependencies {
     androidTestImplementation libs.espresso.core
     implementation libs.firebase.firestore.v2303
     implementation libs.firebase.core
+    implementation 'com.google.firebase:firebase-auth:23.0.0'
 }

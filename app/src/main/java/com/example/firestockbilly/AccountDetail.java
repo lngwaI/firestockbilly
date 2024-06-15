@@ -1,111 +1,150 @@
 package com.example.firestockbilly;
 
-import android.content.Intent;
-import android.content.SharedPreferences;
+import android.app.AlertDialog;
+import android.content.DialogInterface;
 import android.os.Bundle;
+import android.text.InputType;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
-import android.widget.LinearLayout;
+import android.widget.EditText;
 import android.widget.TextView;
+import android.widget.Toast;
 
-import androidx.annotation.Nullable;
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.firestore.DocumentSnapshot;
+import com.google.firebase.firestore.FirebaseFirestore;
 
 import java.util.ArrayList;
 import java.util.List;
 
 public class AccountDetail extends AppCompatActivity {
 
-    private static final String PREFS_NAME = "UserAccountsPrefs";
-    private static final String KEY_ACCOUNTS = "userAccounts";
-    private static final int REQUEST_CREATE_ACCOUNT = 1;
-
-    private TextView textViewAccountName;
-    private LinearLayout containerRooms;
-    private Button buttonAddNewRoom;
-
-    private List<String> roomsList;
+    private static final String TAG = "AccountDetail";
+    private TextView accountNameTextView;
+    private TextView displayNameTextView;
+    private Button addUserButton;
+    private FirebaseFirestore db;
+    private FirebaseAuth auth;
+    private FirebaseUser currentUser;
+    private String accountId;
 
     @Override
-    protected void onCreate(@Nullable Bundle savedInstanceState) {
+    protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_account_detail);
 
-        textViewAccountName = findViewById(R.id.textViewAccountName);
-        containerRooms = findViewById(R.id.containerRooms);
-        buttonAddNewRoom = findViewById(R.id.buttonAddNewRoom);
+        accountNameTextView = findViewById(R.id.accountNameTextView);
+        displayNameTextView = findViewById(R.id.displayNameTextView);
+        addUserButton = findViewById(R.id.addUserButton);
+        db = FirebaseFirestore.getInstance();
+        auth = FirebaseAuth.getInstance();
+        currentUser = auth.getCurrentUser();
 
-        String accountName = getIntent().getStringExtra("accountName");
-        textViewAccountName.setText(accountName);
+        // Beispiel für das Abrufen der Konto-ID (z.B. durch Klick auf ein Element in der Liste)
+        accountId = getIntent().getStringExtra("accountId");
 
-        roomsList = loadUserRooms();
-        populateRooms(roomsList);
-
-        buttonAddNewRoom.setOnClickListener(view -> {
-            startActivityForResult(new Intent(AccountDetail.this, CreateAccount.class), REQUEST_CREATE_ACCOUNT);
+        // Button Klick Listener
+        addUserButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                addUserToAccount();
+            }
         });
 
-        updateAddRoomButtonVisibility();
-    }
+        // Firestore Dokument abrufen
+        db.collection("accounts").document(accountId).get().addOnCompleteListener(task -> {
+            if (task.isSuccessful()) {
+                DocumentSnapshot document = task.getResult();
+                if (document.exists()) {
+                    String accountName = document.getString("name");
+                    accountNameTextView.setText(accountName);
 
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
+                    // Nutzer-ID aus dem Firestore-Dokument abrufen
+                    String userId = document.getString("userId");
 
-        if (requestCode == REQUEST_CREATE_ACCOUNT && resultCode == RESULT_OK && data != null) {
-            String roomName = data.getStringExtra("roomName");
-            if (roomName != null) {
-                roomsList.add(roomName);
-                saveUserRooms(roomsList);
-                populateRooms(roomsList);
-
-                updateAddRoomButtonVisibility();
+                    // Display-Namen des Nutzers aus Firebase Authentication abrufen
+                    if (currentUser != null && currentUser.getUid().equals(userId)) {
+                        String displayName = currentUser.getDisplayName();
+                        displayNameTextView.setText(displayName);
+                    } else {
+                        Log.e(TAG, "Ungültige Nutzer-ID: " + userId);
+                    }
+                } else {
+                    Log.d(TAG, "Dokument nicht gefunden für Konto-ID: " + accountId);
+                }
+            } else {
+                Log.e(TAG, "Fehler beim Abrufen des Kontos: ", task.getException());
             }
-        }
+        });
     }
 
-    private List<String> loadUserRooms() {
-        SharedPreferences preferences = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
-        String serializedRooms = preferences.getString(KEY_ACCOUNTS, null);
-        if (serializedRooms != null) {
-            return deserializeRooms(serializedRooms);
-        } else {
-            return new ArrayList<>();
-        }
-    }
+    // Methode zum Hinzufügen eines Benutzers zu einem Konto
+    private void addUserToAccount() {
+        if (currentUser != null) {
+            // Erstelle einen AlertDialog für die Nutzer-ID-Eingabe
+            AlertDialog.Builder builder = new AlertDialog.Builder(this);
+            builder.setTitle("Benutzer hinzufügen");
 
-    private void saveUserRooms(List<String> rooms) {
-        SharedPreferences preferences = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
-        SharedPreferences.Editor editor = preferences.edit();
-        editor.putString(KEY_ACCOUNTS, serializeRooms(rooms));
-        editor.apply();
-    }
+            // Setze ein EditText-Feld im Dialog für die Nutzer-ID
+            final EditText input = new EditText(this);
+            input.setInputType(InputType.TYPE_CLASS_TEXT);
+            builder.setView(input);
 
-    private List<String> deserializeRooms(String serializedRooms) {
-        return new ArrayList<>();
-    }
-
-    private String serializeRooms(List<String> rooms) {
-        return "";
-    }
-
-    private void populateRooms(List<String> rooms) {
-        containerRooms.removeAllViews();
-
-        for (String room : rooms) {
-            Button button = new Button(this);
-            button.setText(room);
-            button.setOnClickListener(view -> {
+            // Setze die Buttons im Dialog
+            builder.setPositiveButton("OK", new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialog, int which) {
+                    String userId = input.getText().toString().trim();
+                    addUserIdToAccount(userId);
+                }
             });
-            containerRooms.addView(button);
+
+            builder.setNegativeButton("Abbrechen", new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialog, int which) {
+                    dialog.cancel();
+                }
+            });
+
+            // Zeige den AlertDialog an
+            builder.show();
+        } else {
+            Toast.makeText(this, "Nutzer nicht angemeldet.", Toast.LENGTH_SHORT).show();
         }
     }
 
-    private void updateAddRoomButtonVisibility() {
-        if (roomsList.size() >= 20) {
-            buttonAddNewRoom.setVisibility(View.GONE);
-        } else {
-            buttonAddNewRoom.setVisibility(View.VISIBLE);
-        }
+
+    // Beispiel-Methode zum Hinzufügen einer Nutzer-ID zu einem Konto in Firestore
+    private void addUserIdToAccount(String userId) {
+        db.collection("accounts").document(accountId).get().addOnCompleteListener(task -> {
+            if (task.isSuccessful()) {
+                DocumentSnapshot document = task.getResult();
+                if (document.exists()) {
+                    List<String> userIds = (List<String>) document.get("userIds");
+                    if (userIds == null) {
+                        userIds = new ArrayList<>();
+                    }
+                    if (!userIds.contains(userId)) {
+                        userIds.add(userId);
+                        db.collection("accounts").document(accountId).update("userIds", userIds)
+                                .addOnSuccessListener(aVoid -> Toast.makeText(AccountDetail.this, "Benutzer hinzugefügt.", Toast.LENGTH_SHORT).show())
+                                .addOnFailureListener(e -> Log.e(TAG, "Fehler beim Hinzufügen des Benutzers", e));
+                    } else {
+                        Toast.makeText(AccountDetail.this, "Benutzer bereits hinzugefügt.", Toast.LENGTH_SHORT).show();
+                    }
+                } else {
+                    Log.d(TAG, "Dokument nicht gefunden für Konto-ID: " + accountId);
+                }
+            } else {
+                Log.e(TAG, "Fehler beim Abrufen des Kontos: ", task.getException());
+            }
+        });
     }
+
+
 }
