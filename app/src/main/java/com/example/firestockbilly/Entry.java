@@ -8,6 +8,10 @@ public class Entry {
     private String categoryDetail;
     private List<String> paidForUserIds;
 
+    public Entry() {
+        // Required empty public constructor for Firestore
+    }
+
     public Entry(String amount, String category, String categoryDetail, List<String> paidForUserIds) {
         this.amount = amount;
         this.category = category;
@@ -15,7 +19,7 @@ public class Entry {
         this.paidForUserIds = paidForUserIds;
     }
 
-    // Getter und Setter
+    // Getter und Setter (für Firestore erforderlich)
 
     public String getAmount() {
         return amount;
