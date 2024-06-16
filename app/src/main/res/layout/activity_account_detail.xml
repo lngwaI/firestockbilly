@@ -1,38 +1,117 @@
-<!-- activity_account_detail.xml -->
-<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <TextView
-        android:id="@+id/accountNameTextView"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Account Name"
-        android:textSize="24sp"
-        android:layout_marginTop="16dp"/>
-
-    <TextView
-        android:id="@+id/displayNameTextView"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Display Name"
-        android:textSize="18sp"
-        android:layout_below="@id/accountNameTextView"
-        android:layout_marginTop="16dp"/>
-
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/usersRecyclerView"
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_below="@id/displayNameTextView"
-        android:layout_marginTop="16dp"/>
+        android:orientation="vertical"
+        android:padding="16dp">
 
-    <Button
-        android:id="@+id/addUserButton"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Benutzer hinzufügen"
-        android:layout_below="@id/usersRecyclerView"
-        android:layout_marginTop="16dp"/>
+        <TextView
+            android:id="@+id/accountNameTextView"
+            android:layout_width="match_parent"
+            android:layout_height="40dp"
+            android:background="@drawable/rounded_corners"
+            android:gravity="center"
+            android:text="Account Name"
+            android:textSize="24sp"
+            android:padding="8dp" />
 
-</RelativeLayout>
+        <TextView
+            android:id="@+id/displayNameTextView"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Display Name"
+            android:textSize="18sp"
+            android:paddingVertical="16dp" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Betrag:"
+            android:textSize="18sp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <EditText
+                android:id="@+id/amountEditText"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:hint="Betrag"
+                android:inputType="numberDecimal" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="€"
+                android:textSize="18sp"
+                android:paddingStart="8dp" />
+        </LinearLayout>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Grund:"
+            android:textSize="18sp"
+            android:paddingVertical="16dp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <RadioGroup
+                    android:id="@+id/categoryRadioGroup"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical" />
+
+                <Button
+                    android:id="@+id/addCategoryButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Kategorie hinzufügen" />
+            </LinearLayout>
+
+            <EditText
+                android:id="@+id/categoryDetailEditText"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:hint="Kategorie spezifizieren" />
+        </LinearLayout>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Bezahlt für:"
+            android:textSize="18sp"
+            android:paddingVertical="16dp" />
+
+        <LinearLayout
+            android:id="@+id/paymentForLinearLayout"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+            <!-- Dynamische Auswahl von CheckBoxes/RadioButtons wird programmgesteuert hinzugefügt -->
+        </LinearLayout>
+
+        <Button
+            android:id="@+id/confirmButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
+            android:text="Bestätigen" />
+    </LinearLayout>
+</ScrollView>
