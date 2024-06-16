@@ -16,10 +16,13 @@ import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 public class AccountDetail extends AppCompatActivity {
@@ -28,6 +31,9 @@ public class AccountDetail extends AppCompatActivity {
     private TextView accountNameTextView;
     private TextView displayNameTextView;
     private FirebaseFirestore db;
+    private FirebaseAuth auth;
+    private String accountId;
+    private FirebaseUser currentUser;
     private Button addUserButton, addCategoryButton, confirmButton;
     private LinearLayout paymentForLinearLayout;
     private EditText amountEditText, categoryDetailEditText;
@@ -36,7 +42,7 @@ public class AccountDetail extends AppCompatActivity {
     private List<CheckBox> userCheckBoxes = new ArrayList<>();
     private List<String> categories = new ArrayList<>();
     private String adminUserId;
-    private String defaultUserId; // Store the current user ID
+    private String defaultUserId;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -53,10 +59,20 @@ public class AccountDetail extends AppCompatActivity {
         confirmButton = findViewById(R.id.confirmButton);
 
         db = FirebaseFirestore.getInstance();
+        auth = FirebaseAuth.getInstance();
+        currentUser = auth.getCurrentUser();
 
-        String accountId = getIntent().getStringExtra("accountId");
+        accountId = getIntent().getStringExtra("accountId");
 
-        LinearLayoutManager layoutManager = new LinearLayoutManager(this);
+        if (currentUser != null) {
+            defaultUserId = currentUser.getUid();
+            Log.d(TAG, "Current User ID: " + defaultUserId);
+        } else {
+            Log.e(TAG, "Kein Benutzer ist angemeldet");
+            Toast.makeText(this, "Kein Benutzer ist angemeldet", Toast.LENGTH_SHORT).show();
+            finish();
+            return;
+        }
 
         db.collection("accounts").document(accountId).get().addOnCompleteListener(task -> {
             if (task.isSuccessful()) {
@@ -87,6 +103,7 @@ public class AccountDetail extends AppCompatActivity {
 
                     userIds = (List<String>) document.get("userIds");
                     if (userIds != null && !userIds.isEmpty()) {
+                        Log.d(TAG, "User IDs: " + userIds);
                         displayUserNames(userIds);
                     } else {
                         Log.d(TAG, "Keine weiteren Mitglieder gefunden für Konto-ID: " + accountId);
@@ -101,15 +118,8 @@ public class AccountDetail extends AppCompatActivity {
                 Log.e(TAG, "Fehler beim Abrufen des Kontos: ", task.getException());
             }
         });
-
-        // Initialize with categories from Firestore
         loadCategoriesFromFirestore();
-
         addCategoryButton.setOnClickListener(v -> showAddCategoryDialog());
-
-        // Set the default user as selected
-        // Note: This assumes the current user ID is obtained from somewhere (e.g., Firebase Auth)
-        defaultUserId = "current_user_id"; // Replace with actual user ID
         setDefaultUserSelection(defaultUserId);
     }
 
@@ -125,30 +135,55 @@ public class AccountDetail extends AppCompatActivity {
         });
         paymentForLinearLayout.addView(allCheckBox);
 
-        for (String userId : userIds) {
-            db.collection("users").document(userId).get().addOnCompleteListener(task -> {
-                if (task.isSuccessful()) {
-                    DocumentSnapshot userDocument = task.getResult();
-                    if (userDocument.exists()) {
-                        String displayName = userDocument.getString("displayName");
-                        if (displayName != null && !displayName.isEmpty()) {
-                            CheckBox userCheckBox = new CheckBox(this);
-                            userCheckBox.setText(displayName);
-                            paymentForLinearLayout.addView(userCheckBox);
-                            userCheckBoxes.add(userCheckBox);
-                        } else {
-                            Log.e(TAG, "DisplayName ist leer oder null für userId: " + userId);
-                        }
+        db.collection("users").document(defaultUserId).get().addOnCompleteListener(task -> {
+            if (task.isSuccessful()) {
+                DocumentSnapshot userDocument = task.getResult();
+                if (userDocument.exists()) {
+                    String displayName = userDocument.getString("displayName");
+                    if (displayName != null && !displayName.isEmpty()) {
+                        CheckBox currentUserCheckBox = new CheckBox(this);
+                        currentUserCheckBox.setText(displayName);
+                        currentUserCheckBox.setChecked(true);
+                        paymentForLinearLayout.addView(currentUserCheckBox);
+                        userCheckBoxes.add(currentUserCheckBox);
+                        Log.d(TAG, "Benutzer hinzugefügt: " + displayName);
                     } else {
-                        Log.d(TAG, "User Document not found for userId: " + userId);
+                        Log.e(TAG, "DisplayName ist leer oder null für defaultUserId: " + defaultUserId);
                     }
                 } else {
-                    Log.e(TAG, "Error getting user document for userId: " + userId, task.getException());
+                    Log.d(TAG, "User Document not found for defaultUserId: " + defaultUserId);
                 }
-            });
+            } else {
+                Log.e(TAG, "Error getting user document for defaultUserId: " + defaultUserId, task.getException());
+            }
+        });
+
+        for (String userId : userIds) {
+            if (!userId.equals(defaultUserId)) {
+                db.collection("users").document(userId).get().addOnCompleteListener(task -> {
+                    if (task.isSuccessful()) {
+                        DocumentSnapshot userDocument = task.getResult();
+                        if (userDocument.exists()) {
+                            String displayName = userDocument.getString("displayName");
+                            if (displayName != null && !displayName.isEmpty()) {
+                                CheckBox userCheckBox = new CheckBox(this);
+                                userCheckBox.setText(displayName);
+                                paymentForLinearLayout.addView(userCheckBox);
+                                userCheckBoxes.add(userCheckBox);
+                                Log.d(TAG, "Benutzer hinzugefügt: " + displayName);
+                            } else {
+                                Log.e(TAG, "DisplayName ist leer oder null für userId: " + userId);
+                            }
+                        } else {
+                            Log.d(TAG, "User Document not found for userId: " + userId);
+                        }
+                    } else {
+                        Log.e(TAG, "Error getting user document for userId: " + userId, task.getException());
+                    }
+                });
+            }
         }
     }
-
 
     private void showAddCategoryDialog() {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
@@ -162,25 +197,56 @@ public class AccountDetail extends AppCompatActivity {
         builder.setPositiveButton("OK", (dialog, which) -> {
             String categoryToAdd = input.getText().toString().trim();
             if (!categoryToAdd.isEmpty()) {
-                // Add the category to Firestore
-                db.collection("categories").add(new Category(categoryToAdd))
-                        .addOnSuccessListener(documentReference -> {
-                            // Update local list and UI with the new category
-                            categories.add(categoryToAdd);
-                            updateCategoryRadioGroup();
-                            Toast.makeText(AccountDetail.this, "Kategorie hinzugefügt", Toast.LENGTH_SHORT).show();
-                        })
-                        .addOnFailureListener(e -> {
-                            Log.e(TAG, "Error adding category", e);
-                            Toast.makeText(AccountDetail.this, "Fehler beim Hinzufügen der Kategorie", Toast.LENGTH_SHORT).show();
-                        });
+                checkAndAddCategory(categoryToAdd);
             }
         });
-
-        builder.setNegativeButton("Cancel", (dialog, which) -> dialog.cancel());
-
+        builder.setNegativeButton("Abbrechen", (dialog, which) -> dialog.cancel());
         builder.show();
     }
+
+    private void checkAndAddCategory(String categoryToAdd) {
+        if (categories.contains(categoryToAdd)) {
+            Toast.makeText(this, "Diese Kategorie existiert bereits.", Toast.LENGTH_SHORT).show();
+        } else {
+            // Überprüfen, ob die Kategorie bereits für das Konto existiert
+            db.collection("categories")
+                    .whereEqualTo("name", categoryToAdd)
+                    .whereEqualTo("accountId", accountId)
+                    .get()
+                    .addOnCompleteListener(task -> {
+                        if (task.isSuccessful()) {
+                            boolean categoryExists = !task.getResult().isEmpty();
+                            if (!categoryExists) {
+                                addCategoryToFirestore(categoryToAdd);
+                            } else {
+                                Toast.makeText(this, "Diese Kategorie existiert bereits für dieses Konto.", Toast.LENGTH_SHORT).show();
+                            }
+                        } else {
+                            Log.e(TAG, "Error checking category existence", task.getException());
+                            Toast.makeText(this, "Fehler beim Überprüfen der Kategorie.", Toast.LENGTH_SHORT).show();
+                        }
+                    });
+        }
+    }
+
+
+    private void addCategoryToFirestore(String categoryToAdd) {
+        // Kategorie zur Firestore-Datenbank hinzufügen
+        List<String> accountIds = Collections.singletonList(accountId);  // accountId in eine Liste umwandeln
+        Category category = new Category(categoryToAdd, accountIds);
+        db.collection("categories").add(category)
+                .addOnSuccessListener(documentReference -> {
+                    categories.add(categoryToAdd);
+                    updateCategoryRadioGroup();
+                    Toast.makeText(AccountDetail.this, "Kategorie hinzugefügt", Toast.LENGTH_SHORT).show();
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Error adding category", e);
+                    Toast.makeText(AccountDetail.this, "Fehler beim Hinzufügen der Kategorie", Toast.LENGTH_SHORT).show();
+                });
+    }
+
+
 
     private void updateCategoryRadioGroup() {
         categoryRadioGroup.removeAllViews();
@@ -195,37 +261,23 @@ public class AccountDetail extends AppCompatActivity {
         new AlertDialog.Builder(this)
                 .setTitle("Bestätigung")
                 .setMessage("Möchten Sie den Eintrag speichern?")
-                .setPositiveButton("Ja", (dialog, which) -> {
-                    if (validateEntry()) {
-                        saveEntry();
-                    } else {
-                        Toast.makeText(AccountDetail.this, "Bitte füllen Sie alle erforderlichen Felder aus.", Toast.LENGTH_SHORT).show();
-                    }
-                })
+                .setPositiveButton("Ja", (dialog, which) -> saveEntry())
                 .setNegativeButton("Nein", null)
                 .show();
     }
 
-    private boolean validateEntry() {
-        String amount = amountEditText.getText().toString().trim();
-        String categoryDetail = categoryDetailEditText.getText().toString().trim();
-        boolean isUserSelected = false;
-
-        // Check if at least one user is selected
-        for (CheckBox checkBox : userCheckBoxes) {
-            if (checkBox.isChecked() && !checkBox.getText().toString().equals("Alle")) {
-                isUserSelected = true;
-                break;
-            }
-        }
-
-        // Perform validation
-        return !amount.isEmpty() && !categoryDetail.isEmpty() && isUserSelected;
-    }
-
     private void saveEntry() {
         String amount = amountEditText.getText().toString().trim();
+        if (amount.isEmpty()) {
+            Toast.makeText(this, "Bitte einen Betrag eingeben", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
         String categoryDetail = categoryDetailEditText.getText().toString().trim();
+        if (categoryDetail.isEmpty()) {
+            categoryDetail = "ohne Spez.";
+        }
+
         StringBuilder category = new StringBuilder();
         for (int i = 0; i < categoryRadioGroup.getChildCount(); i++) {
             RadioButton radioButton = (RadioButton) categoryRadioGroup.getChildAt(i);
@@ -236,84 +288,55 @@ public class AccountDetail extends AppCompatActivity {
                 category.append(radioButton.getText().toString());
             }
         }
+        if (category.length() == 0) {
+            Toast.makeText(this, "Bitte eine Kategorie auswählen", Toast.LENGTH_SHORT).show();
+            return;
+        }
 
-        List<String> paidForUserIds = new ArrayList<>();
-        if (paymentForLinearLayout.getChildAt(0) instanceof CheckBox) {
-            CheckBox allCheckBox = (CheckBox) paymentForLinearLayout.getChildAt(0);
-            if (allCheckBox.isChecked()) {
-                paidForUserIds.addAll(userIds);
-            } else {
-                for (CheckBox checkBox : userCheckBoxes) {
-                    if (checkBox.isChecked() && !checkBox.getText().toString().equals("Alle")) {
-                        paidForUserIds.add(userIds.get(userCheckBoxes.indexOf(checkBox)));
-                    }
-                }
+        List<String> selectedUserIds = new ArrayList<>();
+        for (CheckBox checkBox : userCheckBoxes) {
+            if (checkBox.isChecked()) {
+                String userName = checkBox.getText().toString();
+                selectedUserIds.add(userName);
+                Log.d(TAG, "Selected User: " + userName);
             }
         }
 
-        String accountId = getIntent().getStringExtra("accountId");
-        if (accountId != null) {
-            Entry entry = new Entry(amount, category.toString(), categoryDetail, paidForUserIds);
-            db.collection("accounts").document(accountId).collection("entries").add(entry).addOnSuccessListener(documentReference -> {
-                Log.d(TAG, "Eintrag erfolgreich hinzugefügt: " + documentReference.getId());
-                Toast.makeText(this, "Eintrag erfolgreich hinzugefügt", Toast.LENGTH_SHORT).show();
-            }).addOnFailureListener(e -> {
-                Log.e(TAG, "Fehler beim Hinzufügen des Eintrags: ", e);
-                Toast.makeText(this, "Fehler beim Hinzufügen des Eintrags", Toast.LENGTH_SHORT).show();
-            });
-        } else {
-            Log.e(TAG, "Konto-ID nicht übergeben.");
+        if (selectedUserIds.isEmpty()) {
+            Toast.makeText(this, "Bitte mindestens einen Benutzer auswählen", Toast.LENGTH_SHORT).show();
+            return;
         }
+
+        db.collection("entries").add(new Entry(amount, category.toString(), categoryDetail, selectedUserIds));
+
+        Toast.makeText(this, "Eintrag gespeichert", Toast.LENGTH_SHORT).show();
     }
 
     private void loadCategoriesFromFirestore() {
-        db.collection("categories").get().addOnCompleteListener(task -> {
+        db.collection("categories").whereArrayContains("userIds", defaultUserId).get().addOnCompleteListener(task -> {
             if (task.isSuccessful()) {
+                categories.clear();
                 for (DocumentSnapshot document : task.getResult()) {
                     String category = document.getString("name");
-                    categories.add(category);
+                    if (category != null) {
+                        categories.add(category);
+                    }
                 }
-                updateCategoryRadioGroup(); // Update the UI with loaded categories
+                updateCategoryRadioGroup();
             } else {
-                Log.e(TAG, "Error getting categories: ", task.getException());
+                Log.e(TAG, "Error loading categories", task.getException());
             }
         });
     }
 
     private void setDefaultUserSelection(String defaultUserId) {
-        // Ensure that the default user is checked in the UI
+        Log.d(TAG, "Setting default user selection for User ID: " + defaultUserId);
         for (CheckBox checkBox : userCheckBoxes) {
-            if (checkBox.getText().toString().equals("Alle")) {
-                continue; // Skip the "Alle" checkbox
-            }
             if (checkBox.getText().toString().equals(defaultUserId)) {
                 checkBox.setChecked(true);
-                return; // Exit the loop once the default user is found and checked
+                Log.d(TAG, "Default user checkbox set for: " + defaultUserId);
+                break;
             }
         }
-
-        // If the default user is not found among existing checkboxes, create a new checkbox
-        db.collection("users").document(defaultUserId).get().addOnCompleteListener(task -> {
-            if (task.isSuccessful()) {
-                DocumentSnapshot userDocument = task.getResult();
-                if (userDocument.exists()) {
-                    String displayName = userDocument.getString("displayName");
-                    if (displayName != null && !displayName.isEmpty()) {
-                        CheckBox userCheckBox = new CheckBox(this);
-                        userCheckBox.setText(displayName);
-                        userCheckBox.setChecked(true); // Check the newly created checkbox
-                        paymentForLinearLayout.addView(userCheckBox);
-                        userCheckBoxes.add(userCheckBox);
-                    } else {
-                        Log.e(TAG, "DisplayName ist leer oder null für userId: " + defaultUserId);
-                    }
-                } else {
-                    Log.d(TAG, "User Document not found for userId: " + defaultUserId);
-                }
-            } else {
-                Log.e(TAG, "Error getting user document for userId: " + defaultUserId, task.getException());
-            }
-        });
     }
-
 }
