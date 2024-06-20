@@ -14,7 +14,6 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.recyclerview.widget.LinearLayoutManager;
 
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
@@ -22,12 +21,15 @@ import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 
 import java.util.ArrayList;
-import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class AccountDetail extends AppCompatActivity {
 
     private static final String TAG = "AccountDetail";
+    private final List<CheckBox> userCheckBoxes = new ArrayList<>();
+    private final List<String> categories = new ArrayList<>();
     private TextView accountNameTextView;
     private TextView displayNameTextView;
     private FirebaseFirestore db;
@@ -39,10 +41,10 @@ public class AccountDetail extends AppCompatActivity {
     private EditText amountEditText, categoryDetailEditText;
     private RadioGroup categoryRadioGroup;
     private List<String> userIds = new ArrayList<>();
-    private List<CheckBox> userCheckBoxes = new ArrayList<>();
-    private List<String> categories = new ArrayList<>();
     private String adminUserId;
     private String defaultUserId;
+
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -104,8 +106,15 @@ public class AccountDetail extends AppCompatActivity {
                     userIds = (List<String>) document.get("userIds");
                     if (userIds != null && !userIds.isEmpty()) {
                         Log.d(TAG, "User IDs: " + userIds);
+                        // Überprüfe und füge fehlende Nutzer hinzu
+                        checkAndAddMissingUsers();
+                        // Zeige die Nutzernamen an
                         displayUserNames(userIds);
                     } else {
+                        // Wenn keine weiteren Mitglieder gefunden wurden, füge den eingeloggten Nutzer hinzu
+                        List<String> defaultUserList = new ArrayList<>();
+                        defaultUserList.add(defaultUserId);
+                        displayUserNames(defaultUserList);
                         Log.d(TAG, "Keine weiteren Mitglieder gefunden für Konto-ID: " + accountId);
                     }
 
@@ -123,9 +132,12 @@ public class AccountDetail extends AppCompatActivity {
         setDefaultUserSelection(defaultUserId);
     }
 
+
     private void displayUserNames(List<String> userIds) {
         paymentForLinearLayout.removeAllViews();
+        userCheckBoxes.clear();
 
+        // "Alle" Checkbox hinzufügen
         CheckBox allCheckBox = new CheckBox(this);
         allCheckBox.setText("Alle");
         allCheckBox.setOnCheckedChangeListener((buttonView, isChecked) -> {
@@ -135,54 +147,57 @@ public class AccountDetail extends AppCompatActivity {
         });
         paymentForLinearLayout.addView(allCheckBox);
 
-        db.collection("users").document(defaultUserId).get().addOnCompleteListener(task -> {
-            if (task.isSuccessful()) {
-                DocumentSnapshot userDocument = task.getResult();
-                if (userDocument.exists()) {
-                    String displayName = userDocument.getString("displayName");
-                    if (displayName != null && !displayName.isEmpty()) {
-                        CheckBox currentUserCheckBox = new CheckBox(this);
-                        currentUserCheckBox.setText(displayName);
-                        currentUserCheckBox.setChecked(true);
-                        paymentForLinearLayout.addView(currentUserCheckBox);
-                        userCheckBoxes.add(currentUserCheckBox);
-                        Log.d(TAG, "Benutzer hinzugefügt: " + displayName);
-                    } else {
-                        Log.e(TAG, "DisplayName ist leer oder null für defaultUserId: " + defaultUserId);
-                    }
-                } else {
-                    Log.d(TAG, "User Document not found for defaultUserId: " + defaultUserId);
-                }
-            } else {
-                Log.e(TAG, "Error getting user document for defaultUserId: " + defaultUserId, task.getException());
-            }
-        });
-
+        // Nutzer Checkboxen hinzufügen
         for (String userId : userIds) {
-            if (!userId.equals(defaultUserId)) {
-                db.collection("users").document(userId).get().addOnCompleteListener(task -> {
-                    if (task.isSuccessful()) {
-                        DocumentSnapshot userDocument = task.getResult();
-                        if (userDocument.exists()) {
-                            String displayName = userDocument.getString("displayName");
-                            if (displayName != null && !displayName.isEmpty()) {
-                                CheckBox userCheckBox = new CheckBox(this);
-                                userCheckBox.setText(displayName);
-                                paymentForLinearLayout.addView(userCheckBox);
-                                userCheckBoxes.add(userCheckBox);
-                                Log.d(TAG, "Benutzer hinzugefügt: " + displayName);
-                            } else {
-                                Log.e(TAG, "DisplayName ist leer oder null für userId: " + userId);
+            db.collection("users").document(userId).get().addOnCompleteListener(task -> {
+                if (task.isSuccessful()) {
+                    DocumentSnapshot userDocument = task.getResult();
+                    if (userDocument.exists()) {
+                        String displayName = userDocument.getString("displayName");
+                        if (displayName != null && !displayName.isEmpty()) {
+                            CheckBox userCheckBox = new CheckBox(this);
+                            userCheckBox.setText(displayName);
+                            if (userId.equals(defaultUserId)) {
+                                userCheckBox.setChecked(true); // Der eingeloggte Nutzer ist standardmäßig ausgewählt
                             }
+                            paymentForLinearLayout.addView(userCheckBox);
+                            userCheckBoxes.add(userCheckBox);
+                            Log.d(TAG, "Benutzer hinzugefügt: " + displayName);
                         } else {
-                            Log.d(TAG, "User Document not found for userId: " + userId);
+                            Log.e(TAG, "DisplayName ist leer oder null für userId: " + userId);
                         }
                     } else {
-                        Log.e(TAG, "Error getting user document for userId: " + userId, task.getException());
+                        Log.d(TAG, "User Document not found for userId: " + userId);
                     }
-                });
-            }
+                } else {
+                    Log.e(TAG, "Error getting user document for userId: " + userId, task.getException());
+                }
+            });
         }
+    }
+
+
+    private void checkAndAddMissingUsers() {
+        db.collection("users").get().addOnCompleteListener(task -> {
+            if (task.isSuccessful()) {
+                List<String> existingUserIds = new ArrayList<>();
+                for (DocumentSnapshot document : task.getResult()) {
+                    existingUserIds.add(document.getId());
+                }
+                for (String userId : userIds) {
+                    if (!existingUserIds.contains(userId)) {
+                        // Füge den fehlenden Nutzer zur "users" Sammlung hinzu
+                        Map<String, Object> newUser = new HashMap<>();
+                        newUser.put("displayName", "Benutzer " + userId);
+                        db.collection("users").document(userId).set(newUser)
+                                .addOnSuccessListener(aVoid -> Log.d(TAG, "Nutzer hinzugefügt: " + userId))
+                                .addOnFailureListener(e -> Log.e(TAG, "Fehler beim Hinzufügen des Nutzers: " + userId, e));
+                    }
+                }
+            } else {
+                Log.e(TAG, "Fehler beim Abrufen der Nutzer", task.getException());
+            }
+        });
     }
 
     private void showAddCategoryDialog() {
@@ -209,44 +224,35 @@ public class AccountDetail extends AppCompatActivity {
             Toast.makeText(this, "Diese Kategorie existiert bereits.", Toast.LENGTH_SHORT).show();
         } else {
             // Überprüfen, ob die Kategorie bereits für das Konto existiert
-            db.collection("categories")
-                    .whereEqualTo("name", categoryToAdd)
-                    .whereEqualTo("accountId", accountId)
-                    .get()
-                    .addOnCompleteListener(task -> {
-                        if (task.isSuccessful()) {
-                            boolean categoryExists = !task.getResult().isEmpty();
-                            if (!categoryExists) {
-                                addCategoryToFirestore(categoryToAdd);
-                            } else {
-                                Toast.makeText(this, "Diese Kategorie existiert bereits für dieses Konto.", Toast.LENGTH_SHORT).show();
-                            }
-                        } else {
-                            Log.e(TAG, "Error checking category existence", task.getException());
-                            Toast.makeText(this, "Fehler beim Überprüfen der Kategorie.", Toast.LENGTH_SHORT).show();
-                        }
-                    });
+            db.collection("accounts").document(accountId).collection("categories").whereEqualTo("name", categoryToAdd).get().addOnCompleteListener(task -> {
+                if (task.isSuccessful()) {
+                    boolean categoryExists = !task.getResult().isEmpty();
+                    if (!categoryExists) {
+                        addCategoryToFirestore(categoryToAdd);
+                    } else {
+                        Toast.makeText(this, "Diese Kategorie existiert bereits für dieses Konto.", Toast.LENGTH_SHORT).show();
+                    }
+                } else {
+                    Log.e(TAG, "Error checking category existence", task.getException());
+                    Toast.makeText(this, "Fehler beim Überprüfen der Kategorie.", Toast.LENGTH_SHORT).show();
+                }
+            });
         }
     }
 
-
     private void addCategoryToFirestore(String categoryToAdd) {
         // Kategorie zur Firestore-Datenbank hinzufügen
-        List<String> accountIds = Collections.singletonList(accountId);  // accountId in eine Liste umwandeln
-        Category category = new Category(categoryToAdd, accountIds);
-        db.collection("categories").add(category)
-                .addOnSuccessListener(documentReference -> {
-                    categories.add(categoryToAdd);
-                    updateCategoryRadioGroup();
-                    Toast.makeText(AccountDetail.this, "Kategorie hinzugefügt", Toast.LENGTH_SHORT).show();
-                })
-                .addOnFailureListener(e -> {
-                    Log.e(TAG, "Error adding category", e);
-                    Toast.makeText(AccountDetail.this, "Fehler beim Hinzufügen der Kategorie", Toast.LENGTH_SHORT).show();
-                });
+        String creatorUserId = defaultUserId;  // Benutzer-ID des Erstellers
+        Category category = new Category(categoryToAdd, creatorUserId);
+        db.collection("accounts").document(accountId).collection("categories").add(category).addOnSuccessListener(documentReference -> {
+            categories.add(categoryToAdd);
+            updateCategoryRadioGroup();
+            Toast.makeText(AccountDetail.this, "Kategorie hinzugefügt", Toast.LENGTH_SHORT).show();
+        }).addOnFailureListener(e -> {
+            Log.e(TAG, "Error adding category", e);
+            Toast.makeText(AccountDetail.this, "Fehler beim Hinzufügen der Kategorie", Toast.LENGTH_SHORT).show();
+        });
     }
-
-
 
     private void updateCategoryRadioGroup() {
         categoryRadioGroup.removeAllViews();
@@ -258,12 +264,7 @@ public class AccountDetail extends AppCompatActivity {
     }
 
     private void showConfirmationDialog() {
-        new AlertDialog.Builder(this)
-                .setTitle("Bestätigung")
-                .setMessage("Möchten Sie den Eintrag speichern?")
-                .setPositiveButton("Ja", (dialog, which) -> saveEntry())
-                .setNegativeButton("Nein", null)
-                .show();
+        new AlertDialog.Builder(this).setTitle("Bestätigung").setMessage("Möchten Sie den Eintrag speichern?").setPositiveButton("Ja", (dialog, which) -> saveEntry()).setNegativeButton("Nein", null).show();
     }
 
     private void saveEntry() {
@@ -313,7 +314,7 @@ public class AccountDetail extends AppCompatActivity {
     }
 
     private void loadCategoriesFromFirestore() {
-        db.collection("categories").whereArrayContains("userIds", defaultUserId).get().addOnCompleteListener(task -> {
+        db.collection("accounts").document(accountId).collection("categories").get().addOnCompleteListener(task -> {
             if (task.isSuccessful()) {
                 categories.clear();
                 for (DocumentSnapshot document : task.getResult()) {

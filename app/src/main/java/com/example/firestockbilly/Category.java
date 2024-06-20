@@ -4,15 +4,15 @@ import java.util.List;
 
 public class Category {
     private String name;
-    private List<String> accountIds;  // Änderung: Liste von accountIds
+    private String userId;
 
     public Category() {
         // Erforderlicher leerer öffentlicher Konstruktor für Firestore
     }
 
-    public Category(String name, List<String> accountIds) {
+    public Category(String name, String userId) {
         this.name = name;
-        this.accountIds = accountIds;
+        this.userId = userId;
     }
 
     public String getName() {
@@ -23,11 +23,12 @@ public class Category {
         this.name = name;
     }
 
-    public List<String> getAccountIds() {
-        return accountIds;
+    public String getUserId() {
+        return userId;
     }
 
-    public void setAccountIds(List<String> accountIds) {
-        this.accountIds = accountIds;
+    public void setUserId(String userId) {
+        this.userId = userId;
     }
 }
+
