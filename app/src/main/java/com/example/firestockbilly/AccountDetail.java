@@ -27,7 +27,7 @@ import java.util.Map;
 
 public class AccountDetail extends AppCompatActivity {
 
-    private static final String TAG = "AccountDetail";
+    private static final String TAG = "BillyDebug - AccountDetail";
     private final List<CheckBox> userCheckBoxes = new ArrayList<>();
     private final List<String> categories = new ArrayList<>();
     private TextView accountNameTextView;
