@@ -36,15 +36,13 @@ public class AccountDetail extends AppCompatActivity {
     private FirebaseAuth auth;
     private String accountId;
     private FirebaseUser currentUser;
-    private Button addUserButton, addCategoryButton, confirmButton;
+    private Button addCategoryButton, confirmButton;
     private LinearLayout paymentForLinearLayout;
     private EditText amountEditText, categoryDetailEditText;
     private RadioGroup categoryRadioGroup;
     private List<String> userIds = new ArrayList<>();
     private String adminUserId;
     private String defaultUserId;
-
-
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -132,7 +130,6 @@ public class AccountDetail extends AppCompatActivity {
         setDefaultUserSelection(defaultUserId);
     }
 
-
     private void displayUserNames(List<String> userIds) {
         paymentForLinearLayout.removeAllViews();
         userCheckBoxes.clear();
@@ -175,7 +172,6 @@ public class AccountDetail extends AppCompatActivity {
             });
         }
     }
-
 
     private void checkAndAddMissingUsers() {
         db.collection("users").get().addOnCompleteListener(task -> {
@@ -297,9 +293,7 @@ public class AccountDetail extends AppCompatActivity {
         List<String> selectedUserIds = new ArrayList<>();
         for (CheckBox checkBox : userCheckBoxes) {
             if (checkBox.isChecked()) {
-                String userName = checkBox.getText().toString();
-                selectedUserIds.add(userName);
-                Log.d(TAG, "Selected User: " + userName);
+                selectedUserIds.add(checkBox.getText().toString());
             }
         }
 
@@ -308,9 +302,15 @@ public class AccountDetail extends AppCompatActivity {
             return;
         }
 
-        db.collection("entries").add(new Entry(amount, category.toString(), categoryDetail, selectedUserIds));
-
-        Toast.makeText(this, "Eintrag gespeichert", Toast.LENGTH_SHORT).show();
+        Entry entry = new Entry(amount, category.toString(), categoryDetail, selectedUserIds);
+        db.collection("accounts").document(accountId).collection("entries").add(entry)
+                .addOnSuccessListener(documentReference -> {
+                    Toast.makeText(AccountDetail.this, "Eintrag gespeichert", Toast.LENGTH_SHORT).show();
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Fehler beim Hinzufügen des Eintrags", e);
+                    Toast.makeText(AccountDetail.this, "Fehler beim Hinzufügen des Eintrags", Toast.LENGTH_SHORT).show();
+                });
     }
 
     private void loadCategoriesFromFirestore() {

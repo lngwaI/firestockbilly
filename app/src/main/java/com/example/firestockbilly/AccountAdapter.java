@@ -52,7 +52,7 @@ public class AccountAdapter extends RecyclerView.Adapter<AccountAdapter.AccountV
         public void bind(Account account, Context context) {
             accountButton.setText(account.getName());
             accountButton.setOnClickListener(v -> {
-                Intent intent = new Intent(context, AccountDetail.class);
+                Intent intent = new Intent(context, Overview.class);
                 intent.putExtra("accountId", account.getId());
                 intent.putExtra("accountName", account.getName());
                 context.startActivity(intent);

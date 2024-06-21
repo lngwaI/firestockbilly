@@ -12,36 +12,33 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.FirestockBilly"
         tools:targetApi="31">
-
+        <activity
+            android:name=".EntryDetailActivity"
+            android:exported="false" />
+        <activity
+            android:name=".Overview"
+            android:exported="false" />
         <activity
             android:name=".Registration"
             android:exported="false" />
-
         <activity
             android:name=".Login"
-            android:exported="true" >
-
+            android:exported="true">
             <intent-filter>
-
                 <action android:name="android.intent.action.MAIN" />
+
                 <category android:name="android.intent.category.LAUNCHER" />
-
             </intent-filter>
-
         </activity>
-
         <activity
             android:name=".AccountDetail"
             android:exported="false" />
-
         <activity
             android:name=".CreateAccount"
             android:exported="false" />
-
         <activity
             android:name=".MainActivity"
-            android:exported="false"/>
-
+            android:exported="false" />
     </application>
 
 </manifest>
