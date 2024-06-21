@@ -1,6 +1,5 @@
 package com.example.firestockbilly;
 
-import android.content.Context;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -45,6 +44,10 @@ public class EntryAdapter extends RecyclerView.Adapter<EntryAdapter.EntryViewHol
         return entryList.size();
     }
 
+    public interface OnItemClickListener {
+        void onItemClick(int position);
+    }
+
     public static class EntryViewHolder extends RecyclerView.ViewHolder {
 
         public TextView amountTextView, categoryTextView, paidForTextView, paidByTextView;
@@ -56,9 +59,5 @@ public class EntryAdapter extends RecyclerView.Adapter<EntryAdapter.EntryViewHol
             paidByTextView = itemView.findViewById(R.id.paidByTextView);
             paidForTextView = itemView.findViewById(R.id.paidForTextView);
         }
-    }
-
-    public interface OnItemClickListener {
-        void onItemClick(int position);
     }
 }

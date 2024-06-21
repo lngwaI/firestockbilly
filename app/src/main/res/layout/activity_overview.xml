@@ -9,7 +9,7 @@
         android:id="@+id/accountNameTextView"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Account Name"
+        android:text="Konto Name"
         android:textAlignment="center"
         android:layout_marginBottom="12dp"
         android:textSize="18sp"
@@ -22,11 +22,28 @@
         android:layout_height="0dp"
         android:layout_weight="1"/>
 
-    <Button
-        android:id="@+id/addEntryButton"
-        android:layout_width="wrap_content"
+    <LinearLayout
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Eintrag hinzufügen"
-        android:layout_gravity="end"/>
+        android:orientation="horizontal"
+        android:layout_margin="16dp">
+
+        <Button
+            android:id="@+id/manageUserBTN"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_marginEnd="8dp"
+            android:layout_height="wrap_content"
+            android:text="User verwalten"/>
+
+        <Button
+            android:id="@+id/addEntryButton"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_marginStart="8dp"
+            android:layout_height="wrap_content"
+            android:text="Eintrag hinzufügen"/>
+
+    </LinearLayout>
 
 </LinearLayout>
