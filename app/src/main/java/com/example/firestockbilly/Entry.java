@@ -6,16 +6,26 @@ public class Entry {
     private String amount;
     private String category;
     private String categoryDetail;
+    private String paidBy;
     private List<String> paidForUserIds;
 
     public Entry() {
         // Required empty public constructor for Firestore
     }
 
-    public Entry(String amount, String category, String categoryDetail, List<String> paidForUserIds) {
+    public String getPaidBy() {
+        return paidBy;
+    }
+
+    public void setPaidBy(String paidBy) {
+        this.paidBy = paidBy;
+    }
+
+    public Entry(String amount, String category, String categoryDetail, String paidBy, List<String> paidForUserIds) {
         this.amount = amount;
         this.category = category;
         this.categoryDetail = categoryDetail;
+        this.paidBy = paidBy;
         this.paidForUserIds = paidForUserIds;
     }
 

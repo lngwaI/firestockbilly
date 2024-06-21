@@ -13,8 +13,8 @@ import java.util.List;
 
 public class EntryAdapter extends RecyclerView.Adapter<EntryAdapter.EntryViewHolder> {
 
-    private List<Entry> entryList;
-    private OnItemClickListener listener;
+    private final List<Entry> entryList;
+    private final OnItemClickListener listener;
 
     public EntryAdapter(List<Entry> entryList, OnItemClickListener listener) {
         this.entryList = entryList;
@@ -31,8 +31,11 @@ public class EntryAdapter extends RecyclerView.Adapter<EntryAdapter.EntryViewHol
     @Override
     public void onBindViewHolder(@NonNull EntryViewHolder holder, int position) {
         Entry entry = entryList.get(position);
-        holder.amountTextView.setText(String.valueOf(entry.getAmount()));
+
+        float c = Float.parseFloat(entry.getAmount());
+        holder.amountTextView.setText(String.format("%.2f €", c));
         holder.categoryTextView.setText(entry.getCategory());
+        holder.paidByTextView.setText(entry.getPaidBy());
         holder.paidForTextView.setText(String.join(", ", entry.getPaidForUserIds()));
         holder.itemView.setOnClickListener(v -> listener.onItemClick(position));
     }
@@ -44,14 +47,13 @@ public class EntryAdapter extends RecyclerView.Adapter<EntryAdapter.EntryViewHol
 
     public static class EntryViewHolder extends RecyclerView.ViewHolder {
 
-        public TextView amountTextView;
-        public TextView categoryTextView;
-        public TextView paidForTextView;
+        public TextView amountTextView, categoryTextView, paidForTextView, paidByTextView;
 
         public EntryViewHolder(@NonNull View itemView) {
             super(itemView);
             amountTextView = itemView.findViewById(R.id.amountTextView);
             categoryTextView = itemView.findViewById(R.id.categoryTextView);
+            paidByTextView = itemView.findViewById(R.id.paidByTextView);
             paidForTextView = itemView.findViewById(R.id.paidForTextView);
         }
     }

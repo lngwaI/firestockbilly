@@ -3,16 +3,18 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:padding="16dp">
+    android:layout_marginVertical="16dp" >
 
     <TextView
         android:id="@+id/accountNameTextView"
-        android:layout_width="wrap_content"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="Account Name"
+        android:textAlignment="center"
+        android:layout_marginBottom="12dp"
         android:textSize="18sp"
         android:textStyle="bold"
-        android:paddingBottom="16dp"/>
+        android:fadingEdge="vertical" />
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/recyclerView"
@@ -25,6 +27,6 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Eintrag hinzufügen"
-        android:layout_gravity="end"
-        android:padding="16dp"/>
+        android:layout_gravity="end"/>
+
 </LinearLayout>

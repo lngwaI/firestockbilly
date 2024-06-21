@@ -302,7 +302,7 @@ public class AccountDetail extends AppCompatActivity {
             return;
         }
 
-        Entry entry = new Entry(amount, category.toString(), categoryDetail, selectedUserIds);
+        Entry entry = new Entry(amount, category.toString(), categoryDetail, currentUser.getDisplayName(), selectedUserIds);
         db.collection("accounts").document(accountId).collection("entries").add(entry)
                 .addOnSuccessListener(documentReference -> {
                     Toast.makeText(AccountDetail.this, "Eintrag gespeichert", Toast.LENGTH_SHORT).show();
