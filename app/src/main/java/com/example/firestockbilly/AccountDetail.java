@@ -130,6 +130,7 @@ public class AccountDetail extends AppCompatActivity {
         setDefaultUserSelection(defaultUserId);
     }
 
+    //TODO: Alle user ausgeben die in diesem raum sind! Ggf methoden "logik" verändern
     private void displayUserNames(List<String> userIds) {
         paymentForLinearLayout.removeAllViews();
         userCheckBoxes.clear();
