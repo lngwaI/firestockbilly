@@ -26,7 +26,7 @@ public class Overview extends AppCompatActivity {
     private String accountId;
     private String accountName;
     private TextView accountNameTextView;
-    private Button addEntryButton;
+    private Button addEntryButton, manageUsers;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -47,10 +47,17 @@ public class Overview extends AppCompatActivity {
 
         accountNameTextView = findViewById(R.id.accountNameTextView);
         addEntryButton = findViewById(R.id.addEntryButton);
+        manageUsers = findViewById(R.id.manageUserBTN);
 
         accountNameTextView.setText(accountName);
         addEntryButton.setOnClickListener(v -> {
             Intent intent = new Intent(Overview.this, AccountDetail.class);
+            intent.putExtra("accountId", accountId);
+            startActivity(intent);
+        });
+
+        manageUsers.setOnClickListener(v -> {
+            Intent intent = new Intent(Overview.this, UserListActivity.class);
             intent.putExtra("accountId", accountId);
             startActivity(intent);
         });
