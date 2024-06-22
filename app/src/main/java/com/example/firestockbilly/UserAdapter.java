@@ -12,6 +12,8 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.firebase.auth.FirebaseAuth;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 public class UserAdapter extends RecyclerView.Adapter<UserAdapter.UserViewHolder> {
@@ -46,17 +48,30 @@ public class UserAdapter extends RecyclerView.Adapter<UserAdapter.UserViewHolder
     public void onBindViewHolder(@NonNull UserViewHolder holder, int position) {
         User user = userList.get(position);
         Log.d(TAG, "User displayName: " + user.getName());
-        holder.userNameTextView.setText(user.isAdmin() ? user.getName() + " [Admin]" : user.getName());
+        Log.d(TAG, "Position: " + position);
 
+        if(position == 0 && user.isAdmin()) {
+            holder.userNameTextView.setText(user.getName() + " [Admin]");
+        } else {
+            // Sortiere alle Nicht-Admins alphabetisch
+            List<User> nonAdminUsers = new ArrayList<>(userList);
+            nonAdminUsers.removeIf(User::isAdmin); // Entferne den Admin aus der Liste
+            Collections.sort(nonAdminUsers, (u1, u2) -> u1.getName().compareToIgnoreCase(u2.getName()));
 
+            // Position korrigieren, da wir den Admin berücksichtigen müssen
+            User sortedUser = position == 0 ? user : nonAdminUsers.get(position - 1);
+            holder.userNameTextView.setText(sortedUser.getName());
+        }
 
-        if (isAdmin && !user.getId().equals(currentUserId)) {
+        if (isAdmin && !user.getId().equals(currentUserId) && position != 0) {
             holder.removeUserButton.setVisibility(View.VISIBLE);
             holder.removeUserButton.setOnClickListener(v -> removeUserClickListener.onRemoveUserClick(user.getId()));
         } else {
             holder.removeUserButton.setVisibility(View.GONE);
         }
     }
+
+
 
     @Override
     public int getItemCount() {

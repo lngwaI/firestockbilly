@@ -130,7 +130,6 @@ public class AccountDetail extends AppCompatActivity {
         setDefaultUserSelection(defaultUserId);
     }
 
-    //TODO: Alle user ausgeben die in diesem raum sind! Ggf methoden "logik" verändern
     private void displayUserNames(List<String> userIds) {
         paymentForLinearLayout.removeAllViews();
         userCheckBoxes.clear();
@@ -146,33 +145,41 @@ public class AccountDetail extends AppCompatActivity {
         paymentForLinearLayout.addView(allCheckBox);
 
         // Nutzer Checkboxen hinzufügen
-        for (String userId : userIds) {
-            db.collection("users").document(userId).get().addOnCompleteListener(task -> {
-                if (task.isSuccessful()) {
-                    DocumentSnapshot userDocument = task.getResult();
-                    if (userDocument.exists()) {
-                        String displayName = userDocument.getString("displayName");
-                        if (displayName != null && !displayName.isEmpty()) {
-                            CheckBox userCheckBox = new CheckBox(this);
-                            userCheckBox.setText(displayName);
-                            if (userId.equals(defaultUserId)) {
-                                userCheckBox.setChecked(true); // Der eingeloggte Nutzer ist standardmäßig ausgewählt
+        db.collection("accounts").document(accountId).collection("users").get().addOnCompleteListener(task -> {
+            if (task.isSuccessful()) {
+                for (DocumentSnapshot userDocument : task.getResult()) {
+                    String userId = userDocument.getId();
+                    db.collection("users").document(userId).get().addOnCompleteListener(userTask -> {
+                        if (userTask.isSuccessful()) {
+                            DocumentSnapshot userDoc = userTask.getResult();
+                            if (userDoc.exists()) {
+                                String displayName = userDoc.getString("displayName");
+                                if (displayName != null && !displayName.isEmpty()) {
+                                    CheckBox userCheckBox = new CheckBox(this);
+                                    userCheckBox.setText(displayName);
+                                    if (userId.equals(defaultUserId)) {
+                                        userCheckBox.setChecked(true); // Der eingeloggte Nutzer ist standardmäßig ausgewählt
+                                    }
+                                    paymentForLinearLayout.addView(userCheckBox);
+                                    userCheckBoxes.add(userCheckBox);
+                                    Log.d(TAG, "Benutzer hinzugefügt: " + displayName);
+                                } else {
+                                    Log.e(TAG, "DisplayName ist leer oder null für userId: " + userId);
+                                }
+                            } else {
+                                Log.d(TAG, "User Document not found for userId: " + userId);
                             }
-                            paymentForLinearLayout.addView(userCheckBox);
-                            userCheckBoxes.add(userCheckBox);
-                            Log.d(TAG, "Benutzer hinzugefügt: " + displayName);
                         } else {
-                            Log.e(TAG, "DisplayName ist leer oder null für userId: " + userId);
+                            Log.e(TAG, "Error getting user document for userId: " + userId, userTask.getException());
                         }
-                    } else {
-                        Log.d(TAG, "User Document not found for userId: " + userId);
-                    }
-                } else {
-                    Log.e(TAG, "Error getting user document for userId: " + userId, task.getException());
+                    });
                 }
-            });
-        }
+            } else {
+                Log.e(TAG, "Error getting users subcollection for accountId: " + accountId, task.getException());
+            }
+        });
     }
+
 
     private void checkAndAddMissingUsers() {
         db.collection("users").get().addOnCompleteListener(task -> {
